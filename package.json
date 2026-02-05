@@ -3,10 +3,11 @@
   "displayName": "CodeQueue",
   "description": "Turn code comments into tracked work",
   "version": "1.0.0",
+  "publisher": "Dorocha",
   "icon": "assets/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/asterix-sh/codequeue.git"
+    "url": "https://github.com/dorochadev/codequeue.git"
   },
   "type": "module",
   "engines": {
