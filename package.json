@@ -50,6 +50,18 @@
           "type": "string",
           "description": "Template for the GitHub Issue body. Variables: ${file}, ${line}, ${code_snippet}, ${lang}",
           "default": "From TODO in ${file}:${line}\\n\\n```${lang}\\n${code_snippet}\\n```"
+        },
+        "codequeue.enableSnippetExtraction": {
+          "type": "boolean",
+          "description": "Enable automatic code snippet extraction for new tasks.",
+          "default": true
+        },
+        "codequeue.snippetLineCount": {
+          "type": "number",
+          "description": "Number of lines of code to extract as context (max 20).",
+          "default": 5,
+          "maximum": 20,
+          "minimum": 1
         }
       }
     }

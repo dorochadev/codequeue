@@ -25,16 +25,54 @@ export class ScannerService {
             if (!match) { continue; }
 
             let snippet = '';
-            // Look ahead for next non-empty line
-            for (let j = i + 1; j < doc.lineCount; j++) {
-                const nextLine = doc.lineAt(j).text.trim();
-                if (nextLine.length > 0) {
-                    // Use raw text to preserve indentation 
-                    snippet = doc.lineAt(j).text; 
-                    break;
+            
+            // Check Configuration
+            const config = vscode.workspace.getConfiguration('codequeue');
+            const enableSnippet = config.get<boolean>('enableSnippetExtraction', true);
+            const maxLines = config.get<number>('snippetLineCount', 5);
+
+            if (enableSnippet) {
+                const matchIndex = match.index || 0;
+                const preTodoContent = line.substring(0, matchIndex).trim();
+
+                // Check if pre-content is actual code or just comment markers
+                // We strip away common comment chars: / * # < ! - ; space
+                const isCode = preTodoContent.replace(/[\s\/\#\*\<\!\-\;]/g, '').length > 0;
+
+                if (isCode) {
+                    // If there is code on the SAME line before the TODO, use that as the snippet
+                    snippet = line;
+                } else {
+                    // Look ahead for next non-empty lines
+                    let capturedLines = 0;
+                    let foundStart = false;
+
+                    for (let j = i + 1; j < doc.lineCount; j++) {
+                        const lineText = doc.lineAt(j).text;
+                        
+                        if (!foundStart) {
+                            if (lineText.trim().length === 0) continue; // Skip leading empty lines
+                            foundStart = true;
+                        }
+
+                        if (foundStart) {
+                            snippet += lineText + '\n';
+                            capturedLines++;
+                        }
+
+                        if (capturedLines >= maxLines) {
+                            snippet += '...';
+                            break;
+                        }
+
+                        // Stop scanning if we can't find the start of code within 10 lines
+                        if (!foundStart && j > i + 10) break;
+                    }
+                    // Trim the final newline if no ... was added, just to be clean
+                    if (!snippet.endsWith('...')) {
+                        snippet = snippet.trimEnd();
+                    }
                 }
-                // Limit lookahead to prevent scanning too far (e.g., 5 lines)
-                if (j > i + 5) { break; }
             }
 
             const task: Task = {

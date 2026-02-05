@@ -1,5 +1,7 @@
 import { Octokit } from "@octokit/core";
 import * as vscode from 'vscode';
+import * as cp from 'child_process';
+import * as path from 'path';
 import { Logger } from '../utils/logger';
 import { ProjectOption, StatusField, Task } from "../types";
 
@@ -16,6 +18,30 @@ export class GitHubService {
         return this._octokit;
     }
 
+    private static async getBlameAuthor(filePath: string, line: number): Promise<string> {
+        return new Promise((resolve) => {
+            const cwd = path.dirname(filePath);
+            // -L start,end : Blame specific line
+            // --porcelain : Easy parsing
+            cp.exec(`git blame -L ${line},${line} --porcelain "${path.basename(filePath)}"`, { cwd }, (err, stdout) => {
+                if (err) {
+                    // Fallback if not a git repo or other error
+                    resolve('Unknown');
+                    return;
+                }
+                
+                // Parse porcelain output
+                // author Name
+                const match = stdout.match(/^author (.*)$/m);
+                if (match && match[1]) {
+                    resolve(match[1]);
+                } else {
+                    resolve('Unknown');
+                }
+            });
+        });
+    }
+
     /**
      * Publishes a draft issue to the GitHub Project.
      * Optionally moves it to a default status column if configured.
@@ -28,16 +54,21 @@ export class GitHubService {
 
             // Process Body Template
             const defaultTemplate = 'From TODO in ${file}:${line}\n\n```${lang}\n${code_snippet}\n```';
-            const template = vscode.workspace.getConfiguration().get('codequeue.taskBodyTemplate', defaultTemplate);
+            let template = vscode.workspace.getConfiguration().get('codequeue.taskBodyTemplate', defaultTemplate);
+            
+            // Unescape newlines (handle \n literals from JSON config)
+            template = template.replace(/\\n/g, '\n');
 
             const fileExtension = task.file.split('.').pop() || '';
-            
+            const author = await this.getBlameAuthor(task.file, task.line);
+            const codeSnippet = task.snippet || '// No code context available';
+
             const processedBody = template
                 .replace(/\$\{file\}/g, vscode.workspace.asRelativePath(task.file))
                 .replace(/\$\{line\}/g, task.line.toString())
-                .replace(/\$\{code_snippet\}/g, task.snippet || '')
+                .replace(/\$\{code_snippet\}/g, codeSnippet)
                 .replace(/\$\{lang\}/g, fileExtension)
-                .replace(/\$\{author\}/g, 'Unknown'); // Placeholder for now
+                .replace(/\$\{author\}/g, author);
 
             const response: any = await octokit.graphql(`
             mutation($project:ID!, $title:String!, $body:String!) {
