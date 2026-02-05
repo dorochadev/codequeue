@@ -1,48 +1,74 @@
 {
   "name": "codequeue",
-  "displayName": "codequeue",
+  "displayName": "CodeQueue",
   "description": "Turn code comments into tracked work",
-  "version": "0.0.1",
-  "engines": {
-    "vscode": "^1.109.0"
+  "version": "1.0.0",
+  "icon": "assets/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/asterix-sh/codequeue.git"
   },
-  "categories": [
-    "Other"
+  "type": "module",
+  "engines": {
+    "vscode": "^1.104.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onStartupFinished"
   ],
-  "activationEvents": [],
   "main": "./dist/extension.js",
+
   "contributes": {
     "commands": [
       {
-        "command": "codequeue.helloWorld",
-        "title": "Hello World"
+        "command": "codequeue.setToken",
+        "title": "CodeQueue: Set GitHub Token"
+      },
+      {
+        "command": "codequeue.setProjectId",
+        "title": "CodeQueue: Set Project ID"
+      },
+      {
+        "command": "codequeue.setStatus",
+        "title": "CodeQueue: Set Default Status"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "CodeQueue",
+      "properties": {
+        "codequeue.projectId": {
+          "type": "string",
+          "description": "GitHub Project V2 ID"
+        },
+        "codequeue.statusSettings": {
+          "type": "object",
+          "description": "Stores the Field ID and Option ID for the default status",
+          "default": {}
+        }
+      }
+    }
   },
+
   "scripts": {
-    "vscode:prepublish": "npm run package",
-    "compile": "npm run check-types && npm run lint && node esbuild.js",
-    "watch": "npm-run-all -p watch:*",
+    "compile": "bun run check-types && bun run lint && node esbuild.js",
+    "watch": "bun run watch:esbuild & bun run watch:tsc",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "npm run check-types && npm run lint && node esbuild.js --production",
-    "compile-tests": "tsc -p . --outDir out",
-    "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "package": "bun run check-types && bun run lint && node esbuild.js --production",
     "check-types": "tsc --noEmit",
-    "lint": "eslint src",
-    "test": "vscode-test"
+    "lint": "eslint src"
   },
+
   "devDependencies": {
-    "@types/vscode": "^1.109.0",
-    "@types/mocha": "^10.0.10",
+    "@types/vscode": "^1.104.0",
     "@types/node": "22.x",
-    "typescript-eslint": "^8.54.0",
     "eslint": "^9.39.2",
     "esbuild": "^0.27.2",
-    "npm-run-all": "^4.1.5",
     "typescript": "^5.9.3",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "typescript-eslint": "^8.54.0"
+  },
+
+  "dependencies": {
+    "@octokit/core": "^7.0.6"
   }
 }

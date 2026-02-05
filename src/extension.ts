@@ -1,26 +1,60 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import { ScannerService } from './services/scannerService';
+import { Logger } from './utils/logger';
+import { registerConfigCommands } from './commands/configCommands';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+    Logger.log('Extension active');
+    
+    // Status Bar Setup
+    const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    statusBar.command = 'codequeue.setToken';
+    context.subscriptions.push(statusBar);
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "codequeue" is now active!');
+    const updateStatus = async () => {
+        const token = await context.secrets.get('codequeue.githubToken');
+        const projectId = vscode.workspace.getConfiguration().get<string>('codequeue.projectId');
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('codequeue.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from codequeue!');
-	});
+        if (!token) {
+            statusBar.text = '$(alert) CodeQueue: No Token';
+            statusBar.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+            statusBar.tooltip = 'Click to set GitHub Token';
+            statusBar.command = 'codequeue.setToken';
+            statusBar.show();
+        } else if (!projectId) {
+            statusBar.text = '$(alert) CodeQueue: No Project ID';
+            statusBar.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+            statusBar.tooltip = 'Click to set Project ID';
+            statusBar.command = 'codequeue.setProjectId';
+            statusBar.show();
+        } else {
+            statusBar.text = '$(check) CodeQueue';
+            statusBar.backgroundColor = undefined;
+            statusBar.tooltip = 'CodeQueue is active and ready';
+            statusBar.command = undefined; 
+            statusBar.show();
+        }
+    };
 
-	context.subscriptions.push(disposable);
+    // Initial check
+    updateStatus();
+
+    // Register Commands
+    registerConfigCommands(context, updateStatus);
+
+    // Register Save Listener
+    const saveListener = vscode.workspace.onDidSaveTextDocument(async doc => {
+        Logger.log(`File saved: ${doc.fileName}`);
+        statusBar.text = '$(sync~spin) CodeQueue: Syncing...';
+        statusBar.show();
+        try {
+            await ScannerService.scanDocument(doc, context);
+        } finally {
+            updateStatus();
+        }
+    });
+
+    context.subscriptions.push(saveListener, Logger.channel);
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}
