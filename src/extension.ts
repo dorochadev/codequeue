@@ -44,6 +44,11 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Register Save Listener
     const saveListener = vscode.workspace.onDidSaveTextDocument(async doc => {
+        const config = vscode.workspace.getConfiguration('codequeue');
+        if (!config.get<boolean>('enableAutoScanOnSave', true)) {
+            return;
+        }
+
         Logger.log(`File saved: ${doc.fileName}`);
         statusBar.text = '$(sync~spin) CodeQueue: Syncing...';
         statusBar.show();

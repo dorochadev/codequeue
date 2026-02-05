@@ -62,6 +62,17 @@
           "default": 5,
           "maximum": 20,
           "minimum": 1
+        },
+        "codequeue.enableAutoScanOnSave": {
+          "type": "boolean",
+          "description": "Automatically scan and sync TODOs when a file is saved.",
+          "default": true
+        },
+        "codequeue.loggingLevel": {
+          "type": "string",
+          "description": "Level of logging detail.",
+          "enum": ["verbose", "error", "none"],
+          "default": "verbose"
         }
       }
     }

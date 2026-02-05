@@ -11,10 +11,16 @@ export class Logger {
     }
 
     public static log(message: string) {
+        const level = vscode.workspace.getConfiguration().get<string>('codequeue.loggingLevel', 'verbose');
+        if (level === 'none' || level === 'error') { return; }
+        
         this.channel.appendLine(`[${new Date().toLocaleTimeString()}] ${message}`);
     }
 
     public static error(message: string, error?: any) {
+        const level = vscode.workspace.getConfiguration().get<string>('codequeue.loggingLevel', 'verbose');
+        if (level === 'none') { return; }
+
         this.channel.appendLine(`[ERROR] ${message} ${error ? JSON.stringify(error) : ''}`);
     }
 
