@@ -45,6 +45,11 @@
           "type": "object",
           "description": "Stores the Field ID and Option ID for the default status",
           "default": {}
+        },
+        "codequeue.taskBodyTemplate": {
+          "type": "string",
+          "description": "Template for the GitHub Issue body. Variables: ${file}, ${line}, ${code_snippet}, ${lang}",
+          "default": "From TODO in ${file}:${line}\\n\\n```${lang}\\n${code_snippet}\\n```"
         }
       }
     }

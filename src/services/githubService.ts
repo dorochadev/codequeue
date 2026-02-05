@@ -25,6 +25,20 @@ export class GitHubService {
 
         try {
             Logger.log(`Publishing task "${task.title}" to project ${projectId}...`);
+
+            // Process Body Template
+            const defaultTemplate = 'From TODO in ${file}:${line}\n\n```${lang}\n${code_snippet}\n```';
+            const template = vscode.workspace.getConfiguration().get('codequeue.taskBodyTemplate', defaultTemplate);
+
+            const fileExtension = task.file.split('.').pop() || '';
+            
+            const processedBody = template
+                .replace(/\$\{file\}/g, vscode.workspace.asRelativePath(task.file))
+                .replace(/\$\{line\}/g, task.line.toString())
+                .replace(/\$\{code_snippet\}/g, task.snippet || '')
+                .replace(/\$\{lang\}/g, fileExtension)
+                .replace(/\$\{author\}/g, 'Unknown'); // Placeholder for now
+
             const response: any = await octokit.graphql(`
             mutation($project:ID!, $title:String!, $body:String!) {
                 addProjectV2DraftIssue(input:{
@@ -38,7 +52,7 @@ export class GitHubService {
             `, {
                 project: projectId,
                 title: task.title,
-                body: `From TODO in ${task.file}:${task.line}`
+                body: processedBody
             });
 
             const newId = response.addProjectV2DraftIssue.projectItem.id;

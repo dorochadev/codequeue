@@ -24,11 +24,25 @@ export class ScannerService {
             
             if (!match) { continue; }
 
+            let snippet = '';
+            // Look ahead for next non-empty line
+            for (let j = i + 1; j < doc.lineCount; j++) {
+                const nextLine = doc.lineAt(j).text.trim();
+                if (nextLine.length > 0) {
+                    // Use raw text to preserve indentation 
+                    snippet = doc.lineAt(j).text; 
+                    break;
+                }
+                // Limit lookahead to prevent scanning too far (e.g., 5 lines)
+                if (j > i + 5) { break; }
+            }
+
             const task: Task = {
                 title: match[3].trim(),
                 tag: match[2] || 'general',
                 file: doc.fileName,
-                line: i + 1
+                line: i + 1,
+                snippet: snippet
             };
 
             // Use independent hash (no line number involved)

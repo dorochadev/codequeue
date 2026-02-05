@@ -10,6 +10,7 @@ export interface Task {
     file: string;
     line: number;
     hash?: string;
+    snippet?: string;
 }
 
 export interface StatusOption {
