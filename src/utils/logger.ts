@@ -15,6 +15,7 @@ export class Logger {
         if (level === 'none' || level === 'error') { return; }
         
         this.channel.appendLine(`[${new Date().toLocaleTimeString()}] ${message}`);
+        console.log(`[CodeQueue] ${message}`);
     }
 
     public static error(message: string, error?: any) {
@@ -22,6 +23,7 @@ export class Logger {
         if (level === 'none') { return; }
 
         this.channel.appendLine(`[ERROR] ${message} ${error ? JSON.stringify(error) : ''}`);
+        console.error(`[CodeQueue] [ERROR] ${message}`, error);
     }
 
     public static show() {

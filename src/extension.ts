@@ -2,39 +2,39 @@ import * as vscode from 'vscode';
 import { ScannerService } from './services/scannerService';
 import { Logger } from './utils/logger';
 import { registerConfigCommands } from './commands/configCommands';
+import { ProviderFactory } from './providers/ProviderFactory';
+import { ProviderConfig } from './providers/ProviderConfig';
 
 export function activate(context: vscode.ExtensionContext) {
     Logger.log('Extension active');
+    ProviderFactory.initialize(context);
+    
+    // Migrate old settings to new structure
+    ProviderConfig.migrateOldSettings().catch(err => {
+        Logger.error('Failed to migrate settings', err);
+    });
     
     // Status Bar Setup
     const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     statusBar.command = 'codequeue.setToken';
     context.subscriptions.push(statusBar);
 
-    const updateStatus = async () => {
-        const token = await context.secrets.get('codequeue.githubToken');
-        const projectId = vscode.workspace.getConfiguration().get<string>('codequeue.projectId');
+    async function updateStatus() {
+        const provider = ProviderFactory.getProvider();
+        const isReady = await provider.validateConfiguration();
 
-        if (!token) {
-            statusBar.text = '$(alert) CodeQueue: No Token';
-            statusBar.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
-            statusBar.tooltip = 'Click to set GitHub Token';
-            statusBar.command = 'codequeue.setToken';
-            statusBar.show();
-        } else if (!projectId) {
-            statusBar.text = '$(alert) CodeQueue: No Project ID';
-            statusBar.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
-            statusBar.tooltip = 'Click to set Project ID';
-            statusBar.command = 'codequeue.setProjectId';
-            statusBar.show();
+        if (!isReady) {
+            statusBar.text = `$(alert) CodeQueue: Setup ${provider.displayName}`;
+            statusBar.tooltip = `Click to configure ${provider.displayName}`;
+            statusBar.command = provider.requiresAuthentication ? 'codequeue.setToken' : 'codequeue.setProjectId';
+            statusBar.color = new vscode.ThemeColor('errorForeground');
         } else {
             statusBar.text = '$(check) CodeQueue';
-            statusBar.backgroundColor = undefined;
-            statusBar.tooltip = 'CodeQueue is active and ready';
+            statusBar.tooltip = `CodeQueue is active (${provider.displayName})`;
             statusBar.command = undefined; 
-            statusBar.show();
         }
-    };
+        statusBar.show();
+    }
 
     // Initial check
     updateStatus();
@@ -54,6 +54,9 @@ export function activate(context: vscode.ExtensionContext) {
         statusBar.show();
         try {
             await ScannerService.scanDocument(doc, context);
+            Logger.log('Sync finished successfully.');
+        } catch (e) {
+            Logger.error('Sync failed', e);
         } finally {
             updateStatus();
         }
@@ -63,3 +66,4 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {}
+

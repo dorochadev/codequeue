@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { TaskEntry, Task } from '../types';
 import { hashTask } from '../utils/crypto';
-import { GitHubService } from './githubService';
+import { ProviderFactory } from '../providers/ProviderFactory';
 import { Logger } from '../utils/logger';
 
 export class ScannerService {
@@ -51,7 +51,7 @@ export class ScannerService {
                         const lineText = doc.lineAt(j).text;
                         
                         if (!foundStart) {
-                            if (lineText.trim().length === 0) continue; // Skip leading empty lines
+                            if (lineText.trim().length === 0) { continue; } // Skip leading empty lines
                             foundStart = true;
                         }
 
@@ -66,7 +66,7 @@ export class ScannerService {
                         }
 
                         // Stop scanning if we can't find the start of code within 10 lines
-                        if (!foundStart && j > i + 10) break;
+                        if (!foundStart && j > i + 10) { break; }
                     }
                     // Trim the final newline if no ... was added, just to be clean
                     if (!snippet.endsWith('...')) {
@@ -103,28 +103,42 @@ export class ScannerService {
         const storedFileTasks = validStoredTasks.filter(t => t.file === doc.fileName);
         let stateChanged = false;
 
-        // Verify Init Credentials
-        const token = await context.secrets.get('codequeue.githubToken');
-        const projectId = vscode.workspace.getConfiguration().get<string>('codequeue.projectId');
-
-        if (!token || !projectId) {
-            // Logger.log("Skipping sync - credentials missing");
-            // If we don't return here, we might just track them locally?
-            // in future we might add support for other kanban services like linear, trello, clickup, notion
-            return; 
+        // Get Active Provider
+        const provider = ProviderFactory.getProvider();
+        if (!provider) {
+             Logger.log("No active provider found. Skipping sync.");
+             return;
         }
 
         // Process New Tasks (Add)
+        const tasksToPublish: Task[] = [];
         for (const task of currentTasks) {
             // Check if this hash is already tracked for this file
-            if (!storedFileTasks.find(s => s.hash === task.hash)) {
-                Logger.log(`New task detected: "${task.title}"`);
+            const existing = storedFileTasks.find(s => s.hash === task.hash);
+            if (existing) {
+                Logger.log(`Skipping existing task: "${task.title}" (Hash: ${task.hash})`);
+                continue;
+            }
+
+            Logger.log(`New task detected: "${task.title}"`);
+            tasksToPublish.push(task);
+        }
+
+        if (tasksToPublish.length > 0) {
+            Logger.log(`Batch publishing ${tasksToPublish.length} tasks...`);
+            
+            // Use batch publish
+            const publishedItems = await provider.publishTasks(tasksToPublish);
+
+            // Reconcile IDs back to stored state
+            for (let i = 0; i < tasksToPublish.length; i++) {
+                const task = tasksToPublish[i];
+                // Find corresponding result (handle potential array mismatch if provider is buggy)
+                const result = publishedItems.find(r => r.hash === task.hash);
                 
-                const itemId = await GitHubService.publishTask(task, token, projectId);
-                
-                if (itemId) {
+                if (result && result.itemId) {
                     if (task.hash) {
-                         validStoredTasks.push({ hash: task.hash, itemId, file: doc.fileName });
+                         validStoredTasks.push({ hash: task.hash, itemId: result.itemId, file: doc.fileName });
                          stateChanged = true;
                     }
                 }
@@ -137,7 +151,7 @@ export class ScannerService {
             if (!currentTasks.find(c => c.hash === stored.hash)) {
                 Logger.log(`Task removed from file, archiving: ${stored.hash}`);
                 
-                await GitHubService.archiveTask(stored.itemId, token, projectId);
+                await provider.archiveTask(stored.itemId);
                 
                 // Remove from local state
                 const idx = validStoredTasks.findIndex(x => x.itemId === stored.itemId);
@@ -152,6 +166,9 @@ export class ScannerService {
         if (stateChanged) {
             await context.globalState.update('codequeue.tasks', validStoredTasks);
             Logger.log("Extension state updated.");
+        } else {
+            Logger.log("No state changes detected.");
         }
+        Logger.log("Reconciliation complete.");
     }
 }

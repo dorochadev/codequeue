@@ -16,6 +16,7 @@ export interface Task {
 export interface StatusOption {
     id: string;
     name: string;
+    parentId?: string; // e.g. Field ID for GitHub
 }
 
 export interface StatusField {

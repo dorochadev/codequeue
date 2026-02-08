@@ -9,11 +9,23 @@
     "type": "git",
     "url": "https://github.com/dorochadev/codequeue.git"
   },
+  "license": "MIT",
   "type": "module",
   "engines": {
     "vscode": "^1.104.0"
   },
   "categories": ["Other"],
+  "keywords": [
+    "todo",
+    "task management",
+    "github projects",
+    "trello",
+    "apple reminders",
+    "productivity",
+    "project management",
+    "kanban",
+    "issue tracking"
+  ],
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -22,28 +34,80 @@
   "contributes": {
     "commands": [
       {
+        "command": "codequeue.selectProvider",
+        "title": "CodeQueue: Select Provider"
+      },
+      {
         "command": "codequeue.setToken",
-        "title": "CodeQueue: Set GitHub Token"
+        "title": "CodeQueue: Set Authentication"
       },
       {
         "command": "codequeue.setProjectId",
-        "title": "CodeQueue: Set Project ID"
+        "title": "CodeQueue: Select Project/Board/List"
       },
       {
         "command": "codequeue.setStatus",
-        "title": "CodeQueue: Set Default Status"
+        "title": "CodeQueue: Set Default Status/Column"
       }
     ],
     "configuration": {
       "title": "CodeQueue",
       "properties": {
-        "codequeue.projectId": {
+        "codequeue.provider": {
+          "type": "string",
+          "description": "Select the active task provider.",
+          "enum": ["github", "apple_reminders", "trello"],
+          "enumDescriptions": [
+            "GitHub Projects (V2)",
+            "Apple Reminders (macOS only)",
+            "Trello Boards"
+          ],
+          "default": "github"
+        },
+        "codequeue.providers.github.projectId": {
           "type": "string",
           "description": "GitHub Project V2 ID"
         },
+        "codequeue.providers.github.statusSettings": {
+          "type": "object",
+          "description": "Default status field settings for new GitHub tasks",
+          "default": {}
+        },
+        "codequeue.providers.github.prioritySettings": {
+          "type": "object",
+          "description": "Priority field settings for GitHub tasks",
+          "default": {}
+        },
+        "codequeue.providers.apple_reminders.listName": {
+          "type": "string",
+          "description": "Apple Reminders list name"
+        },
+        "codequeue.providers.trello.apiKey": {
+          "type": "string",
+          "description": "Trello API Key (get from https://trello.com/app-key)"
+        },
+        "codequeue.providers.trello.boardId": {
+          "type": "string",
+          "description": "Trello Board ID"
+        },
+        "codequeue.providers.trello.defaultListId": {
+          "type": "string",
+          "description": "Default Trello List ID for new tasks"
+        },
+        "codequeue.projectId": {
+          "type": "string",
+          "description": "[DEPRECATED] Use codequeue.providers.github.projectId instead",
+          "deprecationMessage": "This setting is deprecated. Use codequeue.providers.github.projectId instead."
+        },
+        "codequeue.appleRemindersList": {
+          "type": "string",
+          "description": "[DEPRECATED] Use codequeue.providers.apple_reminders.listName instead",
+          "deprecationMessage": "This setting is deprecated. Use codequeue.providers.apple_reminders.listName instead."
+        },
         "codequeue.statusSettings": {
           "type": "object",
-          "description": "Stores the Field ID and Option ID for the default status",
+          "description": "[DEPRECATED] Use codequeue.providers.github.statusSettings instead",
+          "deprecationMessage": "This setting is deprecated. Use codequeue.providers.github.statusSettings instead.",
           "default": {}
         },
         "codequeue.taskBodyTemplate": {
