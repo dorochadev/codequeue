@@ -2,7 +2,7 @@
   "name": "codequeue",
   "displayName": "CodeQueue",
   "description": "Turn code comments into tracked work",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "Dorocha",
   "icon": "assets/icon.png",
   "repository": {
