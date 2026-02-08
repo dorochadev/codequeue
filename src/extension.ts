@@ -24,14 +24,27 @@ export function activate(context: vscode.ExtensionContext) {
         const isReady = await provider.validateConfiguration();
 
         if (!isReady) {
-            statusBar.text = `$(alert) CodeQueue: Setup ${provider.displayName}`;
-            statusBar.tooltip = `Click to configure ${provider.displayName}`;
-            statusBar.command = provider.requiresAuthentication ? 'codequeue.setToken' : 'codequeue.setProjectId';
-            statusBar.color = new vscode.ThemeColor('errorForeground');
+            // Check if authentication exists (for providers that need it)
+            const hasAuth = provider.requiresAuthentication ? await provider.authenticate() : true;
+            
+            if (!hasAuth) {
+                // No authentication - prompt to set up credentials (RED)
+                statusBar.text = `$(alert) CodeQueue: Setup ${provider.displayName}`;
+                statusBar.tooltip = `Click to configure ${provider.displayName} authentication`;
+                statusBar.command = 'codequeue.setToken';
+                statusBar.color = new vscode.ThemeColor('errorForeground');
+            } else {
+                // Has auth but missing board/list/project - prompt to configure workspace (ORANGE)
+                statusBar.text = `$(alert) CodeQueue: Setup ${provider.displayName}`;
+                statusBar.tooltip = `Click to select ${provider.displayName} board/project for this workspace`;
+                statusBar.command = 'codequeue.setProjectId';
+                statusBar.color = new vscode.ThemeColor('editorWarning.foreground');
+            }
         } else {
             statusBar.text = '$(check) CodeQueue';
             statusBar.tooltip = `CodeQueue is active (${provider.displayName})`;
-            statusBar.command = undefined; 
+            statusBar.command = undefined;
+            statusBar.color = undefined; // Reset to default color
         }
         statusBar.show();
     }

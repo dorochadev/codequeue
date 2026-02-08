@@ -47,6 +47,8 @@ export class TrelloProvider implements TaskProvider {
         const apiKey = await ProviderConfig.getProviderSetting<string>('trello', 'apiKey');
         const token = await this.context.secrets.get('codequeue.trelloToken');
         
+        Logger.log(`Trello credentials check - API Key: ${apiKey ? 'present' : 'missing'}, Token: ${token ? 'present' : 'missing'}`);
+        
         if (!apiKey || !token) {
             return undefined;
         }
@@ -56,13 +58,29 @@ export class TrelloProvider implements TaskProvider {
 
     public async authenticate(): Promise<boolean> {
         const creds = await this.getCredentials();
-        if (!creds) { return false; }
+        if (!creds) { 
+            Logger.log('Trello authentication failed: Missing credentials');
+            return false; 
+        }
 
         try {
+            Logger.log('Attempting Trello authentication...');
             const response = await fetch(
                 `https://api.trello.com/1/members/me?key=${creds.apiKey}&token=${creds.token}`
             );
-            return response.ok;
+            
+            if (response.ok) {
+                const data = await response.json() as { username?: string };
+                Logger.log(`Trello authentication successful for user: ${data.username || 'unknown'}`);
+                return true;
+            } else if (response.status === 401) {
+                Logger.error(`Trello authentication failed: 401 Unauthorized - Invalid API Key or Token`);
+                Logger.error(`Make sure you're using the Token (not the Secret) from https://trello.com/app-key`);
+                return false;
+            } else {
+                Logger.error(`Trello authentication failed: ${response.status} ${response.statusText}`);
+                return false;
+            }
         } catch (e) {
             Logger.error('Trello authentication failed', e);
             return false;

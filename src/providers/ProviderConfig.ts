@@ -42,9 +42,14 @@ export class ProviderConfig {
         return { providerId, ...providerConfig } as T;
     }
 
-    static async setProviderSetting(providerId: string, key: string, value: any): Promise<void> {
+    static async setProviderSetting(
+        providerId: string, 
+        key: string, 
+        value: any,
+        scope: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Workspace
+    ): Promise<void> {
         const configKey = `${this.CONFIG_PREFIX}.${providerId}.${key}`;
-        await vscode.workspace.getConfiguration().update(configKey, value, vscode.ConfigurationTarget.Global);
+        await vscode.workspace.getConfiguration().update(configKey, value, scope);
     }
 
     static async getProviderSetting<T>(providerId: string, key: string, defaultValue?: T): Promise<T | undefined> {
@@ -59,20 +64,20 @@ export class ProviderConfig {
         // Migrate GitHub settings
         const oldProjectId = config.get<string>('codequeue.projectId');
         if (oldProjectId && !config.get(`${this.CONFIG_PREFIX}.github.projectId`)) {
-            await this.setProviderSetting('github', 'projectId', oldProjectId);
+            await this.setProviderSetting('github', 'projectId', oldProjectId, vscode.ConfigurationTarget.Global);
             await config.update('codequeue.projectId', undefined, vscode.ConfigurationTarget.Global);
         }
 
         const oldStatusSettings = config.get<any>('codequeue.statusSettings');
         if (oldStatusSettings && Object.keys(oldStatusSettings).length > 0 && !config.get(`${this.CONFIG_PREFIX}.github.statusSettings`)) {
-            await this.setProviderSetting('github', 'statusSettings', oldStatusSettings);
+            await this.setProviderSetting('github', 'statusSettings', oldStatusSettings, vscode.ConfigurationTarget.Global);
             await config.update('codequeue.statusSettings', undefined, vscode.ConfigurationTarget.Global);
         }
 
         // Migrate Apple Reminders settings
         const oldRemindersList = config.get<string>('codequeue.appleRemindersList');
         if (oldRemindersList && !config.get(`${this.CONFIG_PREFIX}.apple_reminders.listName`)) {
-            await this.setProviderSetting('apple_reminders', 'listName', oldRemindersList);
+            await this.setProviderSetting('apple_reminders', 'listName', oldRemindersList, vscode.ConfigurationTarget.Global);
             await config.update('codequeue.appleRemindersList', undefined, vscode.ConfigurationTarget.Global);
         }
     }

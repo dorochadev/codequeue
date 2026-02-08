@@ -75,21 +75,38 @@ export function registerConfigCommands(context: vscode.ExtensionContext, updateS
             }
         } else if (provider.id === 'trello') {
             const apiKey = await vscode.window.showInputBox({
-                prompt: 'Enter Trello API Key (get from https://trello.com/app-key)',
-                placeHolder: 'Your API Key'
+                prompt: 'Step 1/2: Enter your Trello API Key',
+                placeHolder: 'Get from https://trello.com/app-key (shown as "Key")',
+                ignoreFocusOut: true
             });
             if (!apiKey) { return; }
 
-            await ProviderConfig.setProviderSetting('trello', 'apiKey', apiKey);
+            await ProviderConfig.setProviderSetting('trello', 'apiKey', apiKey, vscode.ConfigurationTarget.Global);
+            Logger.log(`Trello API Key saved to settings`);
 
             const token = await vscode.window.showInputBox({
-                prompt: 'Enter Trello Token (get from https://trello.com/app-key)',
+                prompt: 'Step 2/2: Enter your Trello Token (called "Secret" on the website)',
                 password: true,
-                placeHolder: 'Your Token'
+                placeHolder: 'Click "Token" link on https://trello.com/app-key to generate',
+                ignoreFocusOut: true
             });
             if (token) {
+                Logger.log(`Attempting to save Trello token to secret storage...`);
                 await context.secrets.store('codequeue.trelloToken', token);
-                vscode.window.showInformationMessage('CodeQueue: Trello credentials saved.');
+                Logger.log(`Trello token saved successfully`);
+                
+                // Verify it was saved
+                const savedToken = await context.secrets.get('codequeue.trelloToken');
+                Logger.log(`Token verification: ${savedToken ? 'Token retrieved successfully' : 'ERROR: Token not found after save!'}`);
+                
+                vscode.window.showInformationMessage('CodeQueue: Trello credentials saved. Now select a board.');
+                
+                // Automatically prompt for board selection after a delay to allow secrets to persist
+                setTimeout(() => {
+                    vscode.commands.executeCommand('codequeue.setProjectId');
+                }, 500);
+            } else {
+                Logger.log('Trello token input cancelled by user');
             }
         }
         
@@ -99,6 +116,10 @@ export function registerConfigCommands(context: vscode.ExtensionContext, updateS
     // Set Project/Board/List
     const setProjectIdCmd = vscode.commands.registerCommand('codequeue.setProjectId', async () => {
         const provider = ProviderFactory.getProvider();
+        
+        // Small delay to ensure secrets are persisted
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         const hasAuth = await provider.authenticate();
 
         if (!hasAuth && provider.requiresAuthentication) {
@@ -136,11 +157,11 @@ export function registerConfigCommands(context: vscode.ExtensionContext, updateS
 
                     // Save based on provider type
                     if (provider.id === 'github') {
-                        await ProviderConfig.setProviderSetting('github', 'projectId', idToSave);
+                        await ProviderConfig.setProviderSetting('github', 'projectId', idToSave); // Workspace-scoped
                     } else if (provider.id === 'apple_reminders') {
-                        await ProviderConfig.setProviderSetting('apple_reminders', 'listName', idToSave);
+                        await ProviderConfig.setProviderSetting('apple_reminders', 'listName', idToSave); // Workspace-scoped
                     } else if (provider.id === 'trello') {
-                        await ProviderConfig.setProviderSetting('trello', 'boardId', idToSave);
+                        await ProviderConfig.setProviderSetting('trello', 'boardId', idToSave); // Workspace-scoped
                     }
 
                     Logger.log(`Project/List set to ${idToSave}`);
@@ -194,7 +215,11 @@ export function registerConfigCommands(context: vscode.ExtensionContext, updateS
             
             if (!options || options.length === 0) {
                 quickPick.hide();
-                vscode.window.showErrorMessage(`CodeQueue: No ${provider.id === 'github' ? 'statuses' : 'lists'} found.`);
+                if (provider.id === 'trello') {
+                    vscode.window.showErrorMessage('CodeQueue: No lists found. Please select a board first.');
+                } else {
+                    vscode.window.showErrorMessage(`CodeQueue: No ${provider.id === 'github' ? 'statuses' : 'lists'} found.`);
+                }
                 return;
             }
 
@@ -220,7 +245,7 @@ export function registerConfigCommands(context: vscode.ExtensionContext, updateS
                         vscode.window.showInformationMessage(`CodeQueue: New tasks will start in "${selection.label}"`);
                     } else if (provider.id === 'trello') {
                         await ProviderConfig.setProviderSetting('trello', 'defaultListId', selection.id);
-                        vscode.window.showInformationMessage(`CodeQueue: New tasks will be added to "${selection.label}"`);
+                        vscode.window.showInformationMessage(`CodeQueue: New tasks will be added to "${selection.label}". Trello is now fully configured!`);
                     }
 
                     Logger.log(`Default ${provider.id === 'github' ? 'status' : 'list'} set to ${selection.label}`);

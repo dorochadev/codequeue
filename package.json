@@ -66,33 +66,40 @@
         },
         "codequeue.providers.github.projectId": {
           "type": "string",
-          "description": "GitHub Project V2 ID"
+          "description": "GitHub Project V2 ID",
+          "scope": "resource"
         },
         "codequeue.providers.github.statusSettings": {
           "type": "object",
           "description": "Default status field settings for new GitHub tasks",
-          "default": {}
+          "default": {},
+          "scope": "resource"
         },
         "codequeue.providers.github.prioritySettings": {
           "type": "object",
           "description": "Priority field settings for GitHub tasks",
-          "default": {}
+          "default": {},
+          "scope": "resource"
         },
         "codequeue.providers.apple_reminders.listName": {
           "type": "string",
-          "description": "Apple Reminders list name"
+          "description": "Apple Reminders list name",
+          "scope": "resource"
         },
         "codequeue.providers.trello.apiKey": {
           "type": "string",
-          "description": "Trello API Key (get from https://trello.com/app-key)"
+          "description": "Trello API Key (get from https://trello.com/app-key)",
+          "scope": "application"
         },
         "codequeue.providers.trello.boardId": {
           "type": "string",
-          "description": "Trello Board ID"
+          "description": "Trello Board ID",
+          "scope": "resource"
         },
         "codequeue.providers.trello.defaultListId": {
           "type": "string",
-          "description": "Default Trello List ID for new tasks"
+          "description": "Default Trello List ID for new tasks",
+          "scope": "resource"
         },
         "codequeue.projectId": {
           "type": "string",
